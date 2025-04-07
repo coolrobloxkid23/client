@@ -1,4 +1,4 @@
--- Client-Side Script (Simplified for Solara Execution)
+-- Client-Side Script (Updated with Find Backdoors and Exit GUI functionality)
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -24,7 +24,7 @@ title.Text = "Admin Controls"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextSize = 18
 
--- Create a ScrollingFrame to hold buttons
+-- Create ScrollingFrame to hold buttons
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Parent = mainFrame
 scrollingFrame.Position = UDim2.new(0, 0, 0, 30)
@@ -39,8 +39,11 @@ uiListLayout.Parent = scrollingFrame
 uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 uiListLayout.Padding = UDim.new(0, 5)
 
+-- RemoteEvent for communication with server
+local remoteEvent = game:GetService("ReplicatedStorage"):WaitForChild("AdminControlsEvent")
+
 -- Function to create buttons in the GUI
-local function createButton(name, callback)
+local function createButton(name, action)
     local button = Instance.new("TextButton")
     button.Parent = scrollingFrame
     button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
@@ -49,32 +52,29 @@ local function createButton(name, callback)
     button.Text = name
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
     button.TextSize = 14
-    button.MouseButton1Click:Connect(callback)
+    button.MouseButton1Click:Connect(function()
+        remoteEvent:FireServer(action)  -- Send the action to the server
+    end)
     return button
 end
 
--- Play Audio Function (triggered via button)
-local function playAudio()
-    local soundId = "rbxassetid://9043345732" -- Replace with your Audio ID
-    local sound = Instance.new("Sound")
-    sound.SoundId = soundId
-    sound.Parent = game.Workspace
-    sound:Play()
-end
-
--- Change Skybox Function (triggered via button)
-local function changeSkybox()
-    local skyboxId = "rbxassetid://10798732439" -- Replace with your Skybox ID
-    local lighting = game:GetService("Lighting")
-    local sky = lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky", lighting)
-    sky.SkyboxBk = skyboxId
-    sky.SkyboxDn = skyboxId
-    sky.SkyboxFt = skyboxId
-    sky.SkyboxLf = skyboxId
-    sky.SkyboxRt = skyboxId
-    sky.SkyboxUp = skyboxId
-end
-
 -- Create Buttons for GUI actions
-createButton("Play Audio", playAudio)
-createButton("Change Skybox", changeSkybox)
+createButton("Play Audio", "PlayAudio")
+createButton("Change Skybox", "ChangeSkybox")
+createButton("Find Backdoors", "FindBackdoors")
+createButton("Exit GUI", "ExitGUI")
+
+-- Listen for responses from the server
+remoteEvent.OnClientEvent:Connect(function(action, data)
+    if action == "BackdoorsFound" then
+        print("Suspicious scripts found: ")
+        for _, backdoor in ipairs(data) do
+            print(backdoor)
+        end
+    elseif action == "NoBackdoors" then
+        print("No suspicious scripts found.")
+    elseif action == "ExitGUI" then
+        screenGui:Destroy()  -- Remove the GUI from the screen
+        print("GUI has been closed.")
+    end
+end)
